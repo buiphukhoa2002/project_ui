@@ -1,4 +1,4 @@
-name: Sync UI to full_project
+name: Sync to Full Project
 
 on:
   push:
@@ -8,29 +8,45 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    
     steps:
-      - name: Checkout source
+      - name: Checkout project_ui
         uses: actions/checkout@v4
-
-      - name: Clone full_project repo
+        with:
+          fetch-depth: 0
+          path: project_ui
+      
+      - name: Checkout full_project
+        uses: actions/checkout@v4
+        with:
+          repository: buiphukhoa2002/full_project
+          token: ${{ secrets.FULL_PROJECT_TOKEN }}
+          fetch-depth: 0
+          path: full_project
+      
+      - name: Sync changes to ui folder
         run: |
-          git clone https://github.com/buiphukhoa2002/full_project.git
-          cd full_project
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Copy UI code into full_project/ui
-        run: |
+          # Remove existing ui folder contents (except .git if any)
           rm -rf full_project/ui/*
-          cp -r ./* full_project/ui/
-
+          
+          # Copy all files from project_ui to full_project/ui
+          cp -r project_ui/* full_project/ui/
+          
+          # Copy hidden files (like .gitignore) but not .git
+          cp -r project_ui/.[!.]* full_project/ui/ 2>/dev/null || true
+      
       - name: Commit and push changes
+        working-directory: full_project
         run: |
-          cd full_project
-          git add ui
-          if git diff --cached --quiet; then
-            echo "No changes to commit."
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          
+          git add ui/
+          
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
           else
-            git commit -m "Sync UI from project_ui ($(date))"
-            git push https://x-access-token:${{ secrets.FULL_PROJECT_TOKEN }}@github.com/buiphukhoa2002/full_project.git main
+            git commit -m "Sync UI from project_ui@${{ github.sha }}"
+            git push origin main
           fi
