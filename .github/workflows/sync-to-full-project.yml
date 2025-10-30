@@ -1,0 +1,36 @@
+name: Sync UI to full_project
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Clone full_project repo
+        run: |
+          git clone https://github.com/buiphukhoa2002/full_project.git
+          cd full_project
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Copy UI code into full_project/ui
+        run: |
+          rm -rf full_project/ui/*
+          cp -r ./* full_project/ui/
+
+      - name: Commit and push changes
+        run: |
+          cd full_project
+          git add ui
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Sync UI from project_ui ($(date))"
+            git push https://x-access-token:${{ secrets.FULL_PROJECT_TOKEN }}@github.com/buiphukhoa2002/full_project.git main
+          fi
